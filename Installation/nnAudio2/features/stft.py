@@ -38,7 +38,7 @@ class STFTBase(nn.Module):
         # If the input spectrogram contains only half of the n_fft
         # Use extend_fbins function to get back another half
         if onesided:
-            X = extend_fbins(X)  # extend freq
+            X = extend_fbins(X, self.n_fft)  # extend freq
         X_real, X_imag = X[:, :, :, 0], X[:, :, :, 1]
 
         # broadcast dimensions to support 2D convolution
@@ -248,8 +248,9 @@ class STFT(STFTBase):
         kernel_cos = torch.tensor(kernel_cos, dtype=torch.float)
 
         # In this way, the inverse kernel and the forward kernel do not share the same memory...
-        kernel_sin_inv = torch.cat((kernel_sin, -kernel_sin[1:-1].flip(0)), 0)
-        kernel_cos_inv = torch.cat((kernel_cos, kernel_cos[1:-1].flip(0)), 0)
+        mirror_end = None if n_fft % 2 else -1
+        kernel_sin_inv = torch.cat((kernel_sin, -kernel_sin[1:mirror_end].flip(0)), 0)
+        kernel_cos_inv = torch.cat((kernel_cos, kernel_cos[1:mirror_end].flip(0)), 0)
 
         if iSTFT:
             self.register_buffer("kernel_sin_inv", kernel_sin_inv.unsqueeze(-1))
